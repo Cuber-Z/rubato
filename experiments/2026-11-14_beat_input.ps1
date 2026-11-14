@@ -1,10 +1,9 @@
 # E42: beat phase as a Transformer input (user idea). The causal beat tracker's phase (sin/cos, scaled
 # by confidence, + confidence) is projected to d_model and added after the CNN. v12's data and recipe,
 # so beat input is the only change. a: delay 120 ms; b: no delay (can rhythm replace lookahead?);
-# c: control, no beat and no delay. Waits for E40b and the beat cache.
+# c: control, no beat and no delay. Waits for the beat cache.
 $ErrorActionPreference = 'Continue'
 function Log($m) { "=== $m $(Get-Date -Format HH:mm:ss)" | Tee-Object -Append data/logs/batch.log }
-while (-not (Select-String -Path data/logs/batch.log -Pattern 'e40b done' -Quiet)) { Start-Sleep 120 }
 while ((Get-ChildItem data/beat_cache/*.npy -ErrorAction SilentlyContinue).Count -lt 1100) { Start-Sleep 60 }
 foreach ($run in @(@('e42a_beat_d3', '--beat-input', 3), @('e42b_beat_d0', '--beat-input', 0), @('e42c_nobeat_d0', '', 0))) {
     $name, $flag, $delay = $run
