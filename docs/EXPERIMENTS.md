@@ -1001,6 +1001,10 @@ Dates are the day the experiment ran.
   (−2.4). Restoring Bollywood's share recovers only part of that (−0.9) and gives back the Billboard
   gain: at this model size and training budget, more Western data competes with Bollywood rather
   than adding to it.
+- **Flicker** (`analysis_raw_flicker.py`, mean of Billboard and Bollywood): live chord blips/min
+  v12 9.3, E40 8.1, E40b 8.7; Steady display changes/min 39.8 / 35.8 / 38.8, Steady blips/min
+  2.6 / 1.8 / 2.4. E40's calmer display is almost all on Bollywood, where it is also 3 pt less
+  accurate (Steady majmin 77.0 vs 80.0): it misses changes as well as blips.
 - **Decision:** neither deployed; v12 stays live. Possible follow-ups: a longer schedule (more data
   at the same epochs means fewer passes per song) or a larger model.
 
