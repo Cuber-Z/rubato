@@ -1028,7 +1028,19 @@ Dates are the day the experiment ran.
   v12 9.3, E40 8.1, E40b 8.7; Steady display changes/min 39.8 / 35.8 / 38.8, Steady blips/min
   2.6 / 1.8 / 2.4. E40's calmer display is almost all on Bollywood, where it is also 3 pt less
   accurate (Steady majmin 77.0 vs 80.0): it misses changes as well as blips.
-- **Decision:** neither deployed; v12 stays live. Possible follow-ups: a longer schedule (more data
+- **E40c** ([`2026-11-15_longer.ps1`](../experiments/2026-11-15_longer.ps1), `models/e40c_long140`):
+  E40b with 140 epochs instead of 80, so each song gets about v12's number of passes.
+
+  | majmin | BB clean | BB no bass < 150 / < 300 | inverted | Bolly clean | Bolly no bass < 150 / < 300 | **overall** | live blips/min | Steady changes / blips per min |
+  |---|---|---|---|---|---|---|---|---|
+  | v12 | 82.5% | 80.8 / 73.8% | 52.8% | 82.4% | 71.6 / 56.5% | 82.5% | 9.3 | 39.8 / 2.6 |
+  | E40c | 82.9% | 81.8 / 75.8% | **57.7%** | 82.3% | 72.5 / **59.9%** | **82.6%** | 8.8 | 39.5 / 2.6 |
+
+  The Bollywood loss was undertraining: with the longer schedule it is back to v12's level, and the
+  extra songs show up as robustness rather than headline accuracy: +4.9 pt on inverted chords and
+  +2.0 / +3.4 pt with the bass below 300 Hz removed (closest to a phone mic), with flicker unchanged
+  or slightly lower. Overall +0.1 is within noise.
+- **Decision (E40/E40b):** neither deployed. Possible follow-ups: a longer schedule (more data
   at the same epochs means fewer passes per song) or a larger model.
 
 ### W01 · Browser-only version (GitHub Pages) · 2026-11-13
@@ -1169,6 +1181,7 @@ Dates are the day the experiment ran.
 | `e39_ctx1600` (+ `_h5p2`) | E39 | 64 s context; +0.5 pt, not deployed (cost) |
 | `e40_choco` (+ `_h5p2`) | E40 | +444 songs; 81.6% overall, not deployed |
 | `e40b_bolly52` (+ `_h5p2`) | E40b | E40 with Bollywood share pinned at 52%; 82.0% overall, not deployed |
+| `e40c_long140` (+ `_h5p2`) | E40c | E40b, 140 epochs; 82.6% overall, more robust without bass and on inversions; deploy candidate |
 | `e42a_beat_d3`, `e42b_beat_d0`, `e42c_nobeat_d0` (+ `_h5p2`) | E42 | beat-phase input; no gain, not deployed |
 | `e35_tune`, `e35b_tune25` (+ `_h5p2`) | E35 | detuned training copies; not deployed |
 | `e36a_early1`, `e36b_early3` (+ `_h5p2`) | E36 | early-switch penalty; not deployed |
