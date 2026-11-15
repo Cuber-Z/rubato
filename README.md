@@ -5,7 +5,7 @@
 Real-time chord recognition from live audio, running entirely in the browser:
 **https://helloparthshah.github.io/rubato/**. (The Python package and CLI behind it, which train,
 evaluate and export the model, are still called `chordstream`.) Each 40 ms of audio produces one decision, computed
-only from audio already heard. The live model (v12) names the chord of the audio 120 ms ago: that
+only from audio already heard. The live model (v13) names the chord of the audio 120 ms ago: that
 short, trained-in delay lets each decision hear a little of what follows, which removes much of
 the flicker at chord changes. It names 108 chords (12 roots × maj, min, 7, maj7, m7, dim, aug,
 sus2, sus4) plus "no chord", and is trained on human-labelled data only: US Billboard hits plus
@@ -115,10 +115,10 @@ around. The key decides spelling (C♯m in E major, D♭ in A♭ major) and is s
 timeline. It doesn't improve chord accuracy (E05, E16), so it is display-only.
 
 **Known weaknesses** (being worked on; see [docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)):
-- **Bass dependence:** v9 fell to 47% on Bollywood without bass (F07). v10–v12, trained with random EQ
-  and bass dropout (E32b, E34b), hold 57–59%, and 70–72% with only the bass guitar range removed.
-  Inverted chords (C/E) are still named after their bass note about half the time (v12: 53% right,
-  up from 44% thanks to the longer context).
+- **Bass dependence:** v9 fell to 47% on Bollywood without bass (F07). v10–v13, trained with random EQ
+  and bass dropout (E32b, E34b), hold 57–60%, and 70–73% with only the bass guitar range removed.
+  Inverted chords (C/E) are still often named after their bass note (v13: 58% right, up from 44%
+  thanks to the longer context and more songs).
 - **Brief wrong flashes:** about 6 per minute in the live chord, mostly to the chord a fourth or fifth
   away (F04). The Steady display hides most of them. HMM, display-rule and loss tweaks (F05, F09, F10,
   E36) all trade accuracy for steadiness at the same rate.
@@ -239,12 +239,12 @@ Every experiment behind these choices is in [docs/EXPERIMENTS.md](docs/EXPERIMEN
 Trained bundles are attached to GitHub Releases, so they don't bloat git history:
 
 ```powershell
-gh release download model-v12 --pattern "*.zip" --dir models
-Expand-Archive models/chordstream-v12.zip models; uv run chordstream transcribe song.wav --bundle models/v12 --print
+gh release download model-v13 --pattern "*.zip" --dir models
+Expand-Archive models/chordstream-v13.zip models; uv run chordstream transcribe song.wav --bundle models/v13 --print
 ```
 
 They were trained on copyrighted recordings, so keep them for personal use. The browser-only site
-loads `chordstream-v12-web.zip` from the same release.
+loads `chordstream-v13-web.zip` from the same release.
 
 ## Workflow
 
@@ -278,15 +278,18 @@ uv run chordstream build-ext                    # -> data/cache_ext
 #    powershell -File experiments/2026-11-12_bollywood_scale.ps1 collects songs -> data/cache_bolly3;
 #    experiments/2026-11-12_bollywood_scaled_train.ps1 builds data/cache_ext_bolly3x2
 
-# 7. Train the live recipe (v12 = E38: v10 recipe with 32 s attention context, batch 8), evaluate, export
-uv run chordstream train --init models/latest --cache data/cache_ext_bolly3x2 --vocab extended --label-delay 3 `
-    --lr 3e-4 --epochs 80 --crops 2000 --transition-weight 3 --random-eq 0.5 --bass-dropout 0.3 `
-    --context 800 --batch-size 8 --out models/v12
-uv run python experiments/hmm55.py models/v12   # deployed HMM (5 s / power 2, see EXPERIMENTS E25) -> models/v12_h5p2
-uv run chordstream evaluate models/v12_h5p2 --cache data/cache_ext
-uv run python experiments/analysis_bollywood.py --v3 models/v12_h5p2   # 61 Bollywood test songs
-uv run python experiments/analysis_bass.py models/v12_h5p2            # robustness without bass
-uv run chordstream export models/v12_h5p2       # ONNX + parity check
+# 7. Train the live recipe (v13 = E40c: v12's recipe, i.e. 32 s attention context, batch 8, plus 444
+#    ChoCo / recovered Billboard songs with Bollywood's crop share pinned at 52%, 140 epochs), evaluate, export.
+#    experiments/2026-11-13_choco.ps1 fetches the ChoCo songs and builds data/cache_ext_bolly3x2_choco
+uv run chordstream train --init models/latest --cache data/cache_ext_bolly3x2_choco --vocab extended --label-delay 3 `
+    --lr 3e-4 --epochs 140 --crops 2000 --transition-weight 3 --random-eq 0.5 --bass-dropout 0.3 `
+    --context 800 --batch-size 8 --share bollytrain=0.52 --out models/v13
+uv run python experiments/hmm55.py models/v13   # deployed HMM (5 s / power 2, see EXPERIMENTS E25) -> models/v13_h5p2
+uv run chordstream evaluate models/v13_h5p2 --cache data/cache_ext
+uv run python experiments/analysis_bollywood.py --v3 models/v13_h5p2   # 61 Bollywood test songs
+uv run python experiments/analysis_bass.py models/v13_h5p2            # robustness without bass
+uv run python experiments/analysis_raw_flicker.py models/v13_h5p2     # flicker (live and Steady)
+uv run chordstream export models/v13_h5p2       # ONNX + parity check
 
 # 8. Ship to the browser site (see "Browser version" below), or run the Python engine locally
 uv run chordstream transcribe song.wav --ref song.lab --print   # simulated live stream + latency stats
@@ -359,27 +362,31 @@ against the hand-corrected labels instead of the aligned ones.
 
 ## Results
 
-The live model is **v12**: v10's recipe (extended vocabulary, 120 ms label delay, human labels only,
-Billboard + 152 Bollywood songs, **random EQ** and **bass dropout** so chords come from the harmony
-rather than the bass line) with **32 s of attention context** instead of 5 s (E34b → v11 at 16 s,
-E38 → v12 at 32 s). The longer context gains about 3 points on normal audio and 9 on inverted chords.
-Models are chosen by cost-benefit across both test sets.
+The live model is **v13**: v12's recipe (extended vocabulary, 120 ms label delay, human labels only,
+**random EQ** and **bass dropout** so chords come from the harmony rather than the bass line, **32 s of
+attention context**) trained on 444 more human-labelled songs (ChoCo: Isophonics, USPop2002, Robbie
+Williams, JAAH; plus slightly flat Billboard songs an alignment bug used to reject), with Bollywood
+kept at half of the training crops and a longer schedule (E40c). Headline accuracy is level with v12;
+the extra songs show up on inverted chords (+5 pt) and with the bass removed (+2–3 pt), the cases
+closest to a phone mic. Earlier steps: 5 → 16 → 32 s context (E34b → v11, E38 → v12) gained about 3
+points and 9 on inverted chords. Models are chosen by cost-benefit across both test sets.
 
-| | v12 (live) | v11 | v10 | v9 | v7 |
-|---|---|---|---|---|---|
-| Bollywood, 61 test songs, majmin / full | **82.4% / 79.8%** | 81.0% / 78.4% | 79.1% / 76.5% | 80.0% / 77.4% | 60.7% / 54.0% |
-| Bollywood, bass removed below 150 / 300 Hz | 71.6% / 56.5% | 70.5% / 56.9% | **71.9% / 58.5%** | 66.8% / 46.8% | – |
-| Billboard, 36 clean held-out songs, majmin / full | 82.5% / 72.8% | 81.5% / 71.0% | 79.5% / 66.8% | 80.2% / 67.7% | **83.3% / 73.0%** |
-| Billboard, bass removed below 150 / 300 Hz | **80.8% / 73.8%** | 79.6% / 72.6% | 78.1% / 71.0% | 76.4% / 65.2% | – |
-| Inverted chords (C/E), Billboard | **52.8%** | 49.7% | 43.5% | 46.6% | – |
-| Steady display, chord changes per minute (Billboard / Bollywood; songs: 28 / 41) | 32.9 / 46.6 | 33.8 / 43.3 | 36.7 / 38.7 | – | – |
-| **Overall** (mean of the two test sets, majmin) | **82.5%** | 81.3% | 79.3% | 80.1% | 72.0% |
-| Chord sheet (480 ms hold, v7) | – | – | – | – | 83.4% majmin, 1.03× changes |
+| | v13 (live) | v12 | v11 | v10 | v9 | v7 |
+|---|---|---|---|---|---|---|
+| Bollywood, 61 test songs, majmin / full | 82.3% / 80.0% | **82.4%** / 79.8% | 81.0% / 78.4% | 79.1% / 76.5% | 80.0% / 77.4% | 60.7% / 54.0% |
+| Bollywood, bass removed below 150 / 300 Hz | **72.5% / 59.9%** | 71.6% / 56.5% | 70.5% / 56.9% | 71.9% / 58.5% | 66.8% / 46.8% | – |
+| Billboard, 36 clean held-out songs, majmin / full | 82.9% / 72.9% | 82.5% / 72.8% | 81.5% / 71.0% | 79.5% / 66.8% | 80.2% / 67.7% | **83.3% / 73.0%** |
+| Billboard, bass removed below 150 / 300 Hz | **81.8% / 75.8%** | 80.8% / 73.8% | 79.6% / 72.6% | 78.1% / 71.0% | 76.4% / 65.2% | – |
+| Inverted chords (C/E), Billboard | **57.7%** | 52.8% | 49.7% | 43.5% | 46.6% | – |
+| Live chord blips per minute (mean of both sets) | **8.8** | 9.3 | – | – | – | – |
+| Steady display, chord changes per minute (Billboard / Bollywood) | 31.7 / 47.2 | 32.9 / 46.6 | 33.8 / 43.3 | 36.7 / 38.7 | – | – |
+| **Overall** (mean of the two test sets, majmin) | **82.6%** | 82.5% | 81.3% | 79.3% | 80.1% | 72.0% |
+| Chord sheet (480 ms hold, v7) | – | – | – | – | – | 83.4% majmin, 1.03× changes |
 
 Bollywood accuracy is measured against sheet-aligned labels (about 82–84% accurate when checked on
 Billboard); hand-corrected gold labels from the annotate page replace them song by song. The
 first fine-tuned model scored 73.8% on Billboard's original 10. A step costs about 3.6 ms of CPU per
-40 ms frame (v12; 2.7 ms for v11 in the same run, 5.0 ms p99). Every experiment, including the ones that didn't help, is in
+40 ms frame (v12 and v13, same size; 2.7 ms for v11 in the same run, 5.0 ms p99). Every experiment, including the ones that didn't help, is in
 **[docs/EXPERIMENTS.md](docs/EXPERIMENTS.md)**, with commands and decisions. The batch scripts
 are in [`experiments/`](experiments/).
 
@@ -409,9 +416,9 @@ word alignment; both were dropped with it.)
   `WEB_MODEL` in the workflow:
 
 ```powershell
-uv run chordstream export-web models/v12 --out site/model   # also re-exports the ONNX step model
-# zip meta.json, model.onnx, state.bin, hmm.bin -> chordstream-v12-web.zip, then:
-gh release upload model-v12 site/chordstream-v12-web.zip
+uv run chordstream export-web models/v13 --out site/model   # also re-exports the ONNX step model
+# zip meta.json, model.onnx, state.bin, hmm.bin -> chordstream-v13-web.zip, then:
+gh release upload model-v13 site/chordstream-v13-web.zip
 ```
 
 Local test build: `cd tests/web; npm ci; npm run parity` (needs `tests/web/make_reference.py` output in
@@ -427,7 +434,7 @@ PCM at 16 kHz in any chunk size and returns one event per completed 40 ms frame:
 |---|---|
 | `time` | stream time at the end of the newest frame (s) |
 | `label`, `name`, `index` | chord of the audio at `time − delay` (Harte label, key-spelled display name, class) |
-| `delay` | the model's label delay in seconds (0.12 for v12) |
+| `delay` | the model's label delay in seconds (0.12 for v13) |
 | `key` | estimated key signature, e.g. `"E / C#m"`, once known |
 | `beat`, `bpm`, `beat_conf` | causal beat tracker (display only) |
 | `display_label`, `display_name` | the steady-display chord (evidence hold, F05), shown big unless Instant is ticked |

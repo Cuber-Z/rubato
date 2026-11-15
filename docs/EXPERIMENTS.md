@@ -57,7 +57,8 @@ Comparisons inside one experiment always use the same set. Differences under ~0.
 | v6 (extended vocab) | was live ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v6)) | 79.9% | 80.8% (36 clean); 70.3% full vocab | 1.6× | +80 ms | E18 |
 | teacher (offline, sees ±5 s) | never | 82.0% | 82.9% (36 clean) | 1.04× | – | E17 |
 | E23b (label delay 240 ms, human labels) | candidate | 83.0% | 83.9% (36 clean) | 1.44× | +240 ms display | E23 |
-| **v12** (v10 recipe + 32 s attention context) | **live** ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v12)) | – | 82.5% majmin, 72.8% full (36 clean); 80.8 / 73.8% without bass < 150 / 300 Hz; inverted 52.8%; **Bollywood 82.4% / 79.8%** (61), 71.6 / 56.5% without bass | 1.36× | 120 ms display | E38 |
+| **v13** (v12 recipe + 444 ChoCo / recovered Billboard songs, Bollywood share 52%, 140 epochs) | **live** ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v13)) | – | 82.9% majmin, 72.9% full (36 clean); 81.8 / 75.8% without bass < 150 / 300 Hz; inverted 57.7%; **Bollywood 82.3% / 80.0%** (61), 72.5 / 59.9% without bass; **overall 82.6%**; live 8.8 blips/min | 1.35× | 120 ms display | E40c |
+| v12 (v10 recipe + 32 s attention context) | superseded ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v12)) | – | 82.5% majmin, 72.8% full (36 clean); 80.8 / 73.8% without bass < 150 / 300 Hz; inverted 52.8%; **Bollywood 82.4% / 79.8%** (61), 71.6 / 56.5% without bass | 1.36× | 120 ms display | E38 |
 | v11 (v10 + 16 s attention context) | superseded ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v11)) | – | 81.5% majmin, 71.0% full (36 clean); 79.6 / 72.6% without bass < 150 / 300 Hz; inverted 49.7%; **Bollywood 81.0% / 78.4%** (61), 70.5 / 56.9% without bass | 1.56× | 120 ms display | E34b |
 | v10 (v9 + random EQ + bass dropout) | superseded ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v10)) | – | 79.5% majmin, 66.8% full (36 clean); 78.1 / 71.0% without bass < 150 / 300 Hz; **Bollywood 79.1% / 76.5%** (61), 71.9 / 58.5% without bass | 1.68× | 120 ms display | E32b |
 | v9 (v7 recipe + 152 Bollywood songs ×2, cleaned sheet labels) | superseded ([release](https://github.com/helloparthshah/rubato/releases/tag/model-v9)) | 77.1% majmin | 80.2% majmin, 67.7% full (36 clean); **Bollywood 80.0% / 77.4%** (61) | 1.62× | 120 ms display | E28b |
@@ -1040,6 +1041,10 @@ Dates are the day the experiment ran.
   extra songs show up as robustness rather than headline accuracy: +4.9 pt on inverted chords and
   +2.0 / +3.4 pt with the bass below 300 Hz removed (closest to a phone mic), with flicker unchanged
   or slightly lower. Overall +0.1 is within noise.
+- **Decision:** deployed as **v13** (2026-11-15, [release](https://github.com/helloparthshah/rubato/releases/tag/model-v13)):
+  level on headline accuracy and flicker, better in the phone-mic-like no-bass case and on
+  inversions, same size and speed. ONNX parity 2.4e-06; browser engine vs Python: probabilities
+  8.9e-07, every event field identical.
 - **Decision (E40/E40b):** neither deployed. Possible follow-ups: a longer schedule (more data
   at the same epochs means fewer passes per song) or a larger model.
 
@@ -1181,7 +1186,7 @@ Dates are the day the experiment ran.
 | `e39_ctx1600` (+ `_h5p2`) | E39 | 64 s context; +0.5 pt, not deployed (cost) |
 | `e40_choco` (+ `_h5p2`) | E40 | +444 songs; 81.6% overall, not deployed |
 | `e40b_bolly52` (+ `_h5p2`) | E40b | E40 with Bollywood share pinned at 52%; 82.0% overall, not deployed |
-| `e40c_long140` (+ `_h5p2`) | E40c | E40b, 140 epochs; 82.6% overall, more robust without bass and on inversions; deploy candidate |
+| `e40c_long140` (+ `_h5p2`), `v13` | E40c | E40b, 140 epochs; 82.6% overall, more robust without bass and on inversions; **deployed as v13** |
 | `e42a_beat_d3`, `e42b_beat_d0`, `e42c_nobeat_d0` (+ `_h5p2`) | E42 | beat-phase input; no gain, not deployed |
 | `e35_tune`, `e35b_tune25` (+ `_h5p2`) | E35 | detuned training copies; not deployed |
 | `e36a_early1`, `e36b_early3` (+ `_h5p2`) | E36 | early-switch penalty; not deployed |
