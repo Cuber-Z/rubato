@@ -70,7 +70,7 @@ a trained-in 120 ms label delay (E23/E25, +2.5 majmin and fewer flips), more dat
 transition loss (E09, lag 120 → 40–80 ms), and a 480 ms hold for the chord sheet (F03, changes
 1.6× → 1.03×). Distillation gave +0.7 (E17) but is no longer used (policy above; E24 showed no
 gain on the extended model).
-Things that did **not** help: an early-switch penalty (E36), detuned training copies (E35, fixes the tuning cliff but costs Bollywood), 36 bins/octave (E37 pilot), beat or key priors in the HMM, a faster frontend, a bigger model
+Things that did **not** help: beat phase as a model input (E42), more Western data competing with Bollywood (E40), an early-switch penalty (E36), detuned training copies (E35, fixes the tuning cliff but costs Bollywood), 36 bins/octave (E37 pilot), beat or key priors in the HMM, a faster frontend, a bigger model
 at the old learning rate, re-timing labels (for training), data beyond ~200 songs at the old
 training budget, drum suppression (E19), a learned raw-waveform front end instead of the CQT (E33, −4), re-tuning HMM stickiness for flicker (F09), a stability loss (E22), draft/verify "speculative"
 display (F02), a second longer-delay head (E26), and per-beat averaging once the model has
@@ -985,6 +985,29 @@ Dates are the day the experiment ran.
   (~22 h)**, train-only prefix `choco`. Most remaining rejects fail the drift check (JAAH jazz takes).
 - **Next:** E40 = v12's recipe + these 444 songs ([`2026-11-13_choco.ps1`](../experiments/2026-11-13_choco.ps1)).
 
+### E42 · Beat phase as a Transformer input · 2026-11-14 — `models/e42a_beat_d3`, `e42b_beat_d0`, `e42c_nobeat_d0`
+- **Idea (user):** the causal beat tracker already knows where the beat is; feed it to the model so
+  it can expect changes on the beat, drop the 120 ms label delay and relax the HMM. Three features
+  per frame (confidence·sin/cos of beat phase, confidence) from `beat.beat_features`, projected by a
+  zero-initialised `beat_proj` and added after the CNN (`--beat-input`). v12's data and recipe.
+  Script: [`2026-11-14_beat_input.ps1`](../experiments/2026-11-14_beat_input.ps1).
+
+  | Model | **overall** | live blips/min | Steady changes/min | Steady blips/min | changes |
+  |---|---|---|---|---|---|
+  | v12 (no beat, delay 120 ms) | **82.5%** | 9.3 | 39.8 | 2.6 | 1.36× |
+  | E42a beat, delay 120 ms | 82.3% | 9.2 | 40.0 | 2.8 | 1.36× |
+  | E42b beat, no delay | 79.7% | 13.6 | 43.3 | 3.9 | 1.61× |
+  | E42c no beat, no delay (control) | 79.8% | 13.6 | 42.7 | 3.6 | 1.59× |
+
+  (Flicker = mean of Billboard and Bollywood, `analysis_raw_flicker.py`.)
+- **Findings:** the beat input does nothing measurable, with or without the delay (a vs v12, b vs c).
+  Dropping the delay costs 2.7 pt and ~46% more live blips, and the beat does not win any of it
+  back: the model still needs to hear ~120 ms past a change to be sure of it, and knowing *when* a
+  change is likely does not tell it *what* the new chord is. This matches the earlier beat results
+  (beat priors in the HMM did not help). The Transformer likely already infers rhythm from the CQT.
+- **Decision:** not deployed; the 120 ms delay and HMM stay. A lighter-HMM follow-up (E42d) is not
+  worth running since b has no accuracy to trade.
+
 ### E40 / E40b · +444 songs (ChoCo + recovered Billboard) · 2026-11-14 — `models/e40_choco`, `models/e40b_bolly52`
 - **Scripts:** [`2026-11-13_choco.ps1`](../experiments/2026-11-13_choco.ps1) (E40: v12's recipe on
   `data/cache_ext_bolly3x2_choco`), [`2026-11-14_bolly_share.ps1`](../experiments/2026-11-14_bolly_share.ps1)
@@ -1146,6 +1169,7 @@ Dates are the day the experiment ran.
 | `e39_ctx1600` (+ `_h5p2`) | E39 | 64 s context; +0.5 pt, not deployed (cost) |
 | `e40_choco` (+ `_h5p2`) | E40 | +444 songs; 81.6% overall, not deployed |
 | `e40b_bolly52` (+ `_h5p2`) | E40b | E40 with Bollywood share pinned at 52%; 82.0% overall, not deployed |
+| `e42a_beat_d3`, `e42b_beat_d0`, `e42c_nobeat_d0` (+ `_h5p2`) | E42 | beat-phase input; no gain, not deployed |
 | `e35_tune`, `e35b_tune25` (+ `_h5p2`) | E35 | detuned training copies; not deployed |
 | `e36a_early1`, `e36b_early3` (+ `_h5p2`) | E36 | early-switch penalty; not deployed |
 | `e37a_bins24`, `e37b_bins36`, `e37c_bins36_micro` (+ `_h5p2`) | E37 | small 36-bin pilot; safe to delete |
